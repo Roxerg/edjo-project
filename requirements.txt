@@ -1,0 +1,4 @@
+sanic
+Pillow==5.4.1
+BeautifulSoup4==4.7.1
+requests==2.21.0
