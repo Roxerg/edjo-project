@@ -3,7 +3,8 @@ from requests import get
 from collections import Counter
 import time
 
-def load(path):
+
+def Load(path):
 
     # if path is URL, GET request it first
     if path[0:4] == "http":
@@ -12,24 +13,32 @@ def load(path):
     img = Image.open(path)
     return img 
 
-def get_colors(img):
+def GetColorsWithFreq(img):
     img = img.convert("RGB")
-    # Image gets resized to reduce the amount of colors to
-    # sift through and due to compression low-frequency colors
-    # are removed
-    img = img.resize((16,16))
+    # img = img.resize((16,16))
     
-    # w, h = img.size
-    cols = img.getcolors(maxcolors=16*16)
-    c = Counter(cols)
-    return len(cols)
+    w, h = img.size
+    return img.getcolors(maxcolors=w*h)
 
+def GetColorsWithFreqHex(img):
+    colors = GetColorsWithFreq(img)
+    for i in range(0, len(colors)):
+        colors[i] = (colors[i][0], RgbToHex(*colors[i][1]))
+    return colors
+
+
+def GetColorsHex(img):
+    colors = GetColorsWithFreqHex(img)
+    return [tpl[1] for tpl in colors]
+
+
+def RgbToHex(r, g, b):
+    return '#{:02x}{:02x}{:02x}'.format(r, g, b)
 
 
 if __name__ == "__main__":
-    start = time.time()
-    f = load("test_img/test1.jpg")
+    f = Load("test_img/test1.png")
   
-    print(get_colors(f))
-    end = time.time()
-    print(end-start)
+    print(GetColorsHex(f))
+    
+    

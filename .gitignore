@@ -1,0 +1,4 @@
+env
+.vscode
+*.rdb
+test_img
