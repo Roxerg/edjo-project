@@ -40,6 +40,7 @@ class db:
                                     user = self.user_name,
                                     password = self.password,
                                     host = host)
+        self.con.autocommit = True
         self.con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self.cur = self.con.cursor()
         print("Connected to database {}.".format(dbname))
@@ -64,32 +65,53 @@ class db:
 
             self.db_conn(dbname=self.DB_NAME)
 
-            colortable_query = "CREATE TABLE colors( color_id serial PRIMARY KEY, hex VARCHAR (7) UNIQUE NOT NULL);"
+            colortable_query = """CREATE TABLE colors 
+                                  (color_id serial PRIMARY KEY, 
+                                  hex VARCHAR (7) UNIQUE NOT NULL);"""
             self.cur.execute(colortable_query)
             
-            urltable_query = "CREATE TABLE urls( url_id serial PRIMARY KEY, url VARCHAR (200) UNIQUE NOT NULL);"
+            urltable_query = """CREATE TABLE urls( 
+                                url_id serial PRIMARY KEY, 
+                                url VARCHAR (200) UNIQUE NOT NULL);"""
             self.cur.execute(urltable_query)
 
             idreltable_query = """CREATE TABLE url_color_lookup 
-            (color_id int REFERENCES colors (color_id), 
-            url_id int REFERENCES urls (url_id), 
-            CONSTRAINT url_color_pkey PRIMARY KEY (color_id, url_id)); """
+                                  (color_id int REFERENCES colors (color_id), 
+                                  url_id int REFERENCES urls (url_id), 
+                                  CONSTRAINT url_color_pkey PRIMARY KEY (color_id, url_id)); """
             self.cur.execute(idreltable_query)
+
+            searchestable_query = """CREATE TABLE searches 
+                                     (id serial PRIMARY KEY,
+                                     search_id VARCHAR (36) UNIQUE NOT NULL,
+                                     page integer NOT NULL, 
+                                     url_id integer REFERENCES urls(url_id));"""
+            self.cur.execute(searchestable_query)
+
+            expiretable_query = """CREATE TABLE expire(
+                                   id serial PRIMARY KEY,
+                                   search_id VARCHAR (36) REFERENCES searches(search_id),
+                                   expire timestamp without time zone);"""
+            
         else:
             self.db_conn(dbname=self.DB_NAME)
     
     def AddEntry(self, colors, img_url):
-        insert_url_query = "INSERT INTO urls (url_id, url) VALUES (DEFAULT, %s) ON CONFLICT (url) DO NOTHING RETURNING url_id;"
-        insert_clr_query = """
-                            INSERT INTO colors (color_id, hex) VALUES (DEFAULT, %s) 
-                            ON CONFLICT (hex) DO NOTHING RETURNING color_id;"""
+        insert_url_query = """INSERT INTO urls (url_id, url) VALUES (DEFAULT, %s) 
+                              ON CONFLICT (url) DO NOTHING RETURNING url_id;"""
+
+        insert_clr_query = """INSERT INTO colors (color_id, hex) VALUES (DEFAULT, %s) 
+                              ON CONFLICT (hex) DO NOTHING RETURNING color_id;"""
+
         find_clr_query = "SELECT color_id FROM colors WHERE hex = %s; " 
         
         insert_lookup_query = "INSERT INTO url_color_lookup VALUES (%s, %s) ;"
 
         self.cur.execute(insert_url_query, (img_url,))
+
         try:
             url_idx = self.cur.fetchone()[0]
+            print(url_idx)
         except:
             colors = []
 
@@ -109,22 +131,80 @@ class db:
         
         print("new entry added")
 
+    def save_search(self, key, ids, expire, perpage):
+        # key - unique identifier of a search
+        # ids - ids of images
+        # expire - time (in minutes) after which entry can expire
+        # perpage - results per page
+
+        # prepare an array of page indices to zip with other variables
+        pages = len(ids)//perpage + (len(ids)%perpage>0)
+        page_idxs = []
+        for p in range(1, pages):
+            page_idxs += [i]*perpage
+
+        # prepare data for query
+        data = list(zip([key]*len(ids), page_idxs, ids))
+
+        entries_template = ','.join(['%s'] * len(ids))
+
+        save_search_query = "INSERT INTO searches (search_id, page, url_id) VALUES {}".format(entries_template)
+        self.cur.execute(save_search_query, data)
+
+        save_expiry_query = """INSERT INTO expire (search_id, expire) 
+                               VALUES (%s, NOW() + (%s * interval '1 minute'));"""
+        self.cur.execute(save_expiry_query, (key, expire,))
+        
+
+        delete_expired()
+
+        return pages
+        
+
+    def page(self, key, page):
+
+        page_query = """SELECT url FROM
+                        (SELECT url_id FROM searches WHERE search_id = %s AND page = %s) b
+                        JOIN urls
+                        ON urls.url_id = b.url_id;"""
+        self.cur.execute(page_query, (key, page,))
+
+        return self.cur.fetchall()
+
+
+    # to run whenever a new search is saved.
+    def delete_expired(self):
+
+        delete_search_query = """DELETE FROM searches WHERE search_id in 
+                                 (SELECT search_id FROM expire 
+                                 WHERE expire < NOW());"""
+        self.cur.execute(delete_search_query)
+
+        delete_expire_query = "DELETE FROM expire WHERE expire < NOW());"
+        self.cur.execute(delete_search_query)
 
 
     def fetch_imgs(self, colors):
         colors = tuple(colors)
-        get_urls_query = """
-    SELECT url_id, url FROM 
-    (SELECT url_id, url FROM urls) u
-    INNER JOIN
-    (SELECT url_id from url_color_lookup WHERE color_id in (SELECT color_id FROM colors WHERE colors.hex in (%s)) 
-    GROUP BY url_id HAVING COUNT(url_id) = %s ORDER BY url_id DESC) b
-    ON u.url_id = b.url_id;
-"""
+        get_urls_query = """SELECT url_id, url FROM 
+                            (SELECT url_id, url FROM urls) u
+                            INNER JOIN
+                            (SELECT url_id from url_color_lookup WHERE color_id in 
+                            (SELECT color_id FROM colors WHERE colors.hex in (%s)) 
+                            GROUP BY url_id HAVING COUNT(url_id) = %s 
+                            ORDER BY url_id DESC) b
+                            ON u.url_id = b.url_id;"""
         self.cur.execute(get_urls_query, (colors, len(colors)))
         
         return self.cur.fetchall()
 
+    def fetch_colors(self):
+
+        get_colors_query = "SELECT hex FROM colors";
+        self.cur.execute(get_colors_query)
+
+        return [x[0] for x in self.cur.fetchall()]
+        
 
     def db_disconnect(self):
         self.cur.close()
@@ -133,4 +213,5 @@ class db:
 if __name__ == "__main__":
     db = db()
     db.connect()
-    print(db.fetch_imgs(["green"]))
+    db.AddEntry(["testclr", "aa"], "teeest")
+    print(db.fetch_colors())
