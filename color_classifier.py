@@ -6,42 +6,40 @@ from redis_conn import redis_conn
 
 import time
 
-
 class ImageClassifier:
 
 
     def __init__(self):
-        
+
         self.r = redis_conn()
         self.db = db()
-        self.db.connect()    
+        self.db.connect()
 
-
-
-    def RunThreads(self, threads=2):   
-   
-        img_url = r.getImage()
-        while img_url == 0:
-            time.sleep(10)
-            img_url = r.getImage()
-
-        r.writeImage(self, img_url)
+    def run_threads(self, threads=2):
 
         for thread in range(0, threads):
-            threading.Thread(target=ProcessImages).start()
+            threading.Thread(target=process_images).start()
 
 
+    def process_images(self):
 
-    def ProcessImages(self):
-    
+        img_url = self.r.get_image()
+
+        while img_url == 0:
+
+            time.sleep(10)
+            img_url = self.r.get_image()
+
+        r.write_image(self, img_url)
+
         while img_url != 0:
-            img_url = r.getImage()
+
+            img_url = self.r.get_image()
 
             img_file = color_handler.load(img_url)
-        
-            colors = color_handler.GetColorsHex(img_file)
+            colors = color_handler.get_colors_hex(img_file)
             
-            self.db.AddEntry(colors, img_url)
+            self.db.add_entry(colors, img_url)
 
 
 

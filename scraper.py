@@ -1,9 +1,8 @@
-
+import asyncio
 import threading
 
 from database import db
 from pinterest import SiteScraper
-import asyncio
 from redis_conn import redis_conn
 
 
@@ -16,10 +15,9 @@ class Scraper:
         self.r = redis_conn()
 
         self.imgs = set()
-        #self.words = set()
         self.used_words = set()
         
-    def InitScraper(self, drivernum=2):
+    def init_scraper(self, drivernum=2):
         
         for i in range(0, drivernum):
             dr = SiteScraper()
@@ -37,9 +35,9 @@ class Scraper:
     
         print("no. of drivers initiated: " + str(len(self.drivers)))
 
-    def RunSearches(self, driver, limit=2):
+    def run_searches(self, driver, limit=2):
 
-        search_word = self.r.GetWord()
+        search_word = self.r.get_word()
 
         while search_word != 0 and len(self.used_words) < limit:
 
@@ -53,19 +51,19 @@ class Scraper:
                     self.words.add(word)
 
             for img in driver.returnSources():
-                self.imgs.add(img)
-                self.r.writeImage(img)
+                # self.imgs.add(img)
+                self.r.write_image(img)
 
-            search_word = self.r.GetWord()
+            search_word = self.r.get_word()
 
         driver.Close()
         return 1
         
 
-    def RunThreads(self):
-        self.InitScraper()
+    def run_threads(self):
+        self.init_scraper()
         for driver in self.drivers:
-            threading.Thread(target=self.RunSearches, args=[driver]).start()
+            threading.Thread(target=self.run_searches, args=[driver]).start()
     
     #async def Run(self):
       

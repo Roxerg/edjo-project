@@ -6,13 +6,11 @@ import time
 
 if __name__ == "__main__":
 
-
     classifier = ImageClassifier()
     scraper = Scraper()
     
-    
-    scraper.RunThreads()
-    classifier.RunThreads()
+    scraper.run_threads()
+    classifier.run_threads()
 
     
     

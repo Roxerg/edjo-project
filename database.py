@@ -2,38 +2,37 @@ from asyncpg import create_pool
 import config
 import asyncio
 import psycopg2
-
-import sqlalchemy.sql
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.sql.sqltypes import DateTime, NullType, String
+import configparser
 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+
+
+
 
 class db:
 
 
     def __init__(self):
 
-        ## TODO: READ CONFIG FOR CAPS LOCK VALS
+        conf = configparser.ConfigParser()
+        conf.read("config.ini")
 
-        self.DB_NAME = 'pinimg'
-        self.DB_HOST = ''
-        
-        self.user_name = 'pin'
-        self.password = 'pinterest'
+        self.db_name = conf["postgresql"]["database"]
+        self.db_host = conf["postgresql"]["host"]
+        initialized = conf.getint("postgresql", "initialized")
+
+        self.user_name = conf["postgresql"]["user"]
+        self.password = conf["postgresql"]["password"]
 
         self.con, self.cur = None, None
-        
 
-        
-        
-    def connect(self):
+        if initialized == 0:
+            self.db_conn(dbname='postgres')
+            self.db_init()
+        else:
+            self.db_conn(dbname=self.db_name)
 
-        # tries to connect to the database that the API uses.
-        # if it is not found, it is initialized and the connection is reattempted.      
-        self.db_conn(dbname='postgres')
-        self.db_init()
-            
 
     def db_conn(self, dbname, host=''):
         self.con = psycopg2.connect(dbname = dbname,
@@ -44,26 +43,33 @@ class db:
         self.con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self.cur = self.con.cursor()
         print("Connected to database {}.".format(dbname))
+
+
+
     
     def db_init(self):
 
+        # tries to connect to the database that the API uses.
+        # if it is not found, it is initialized and the connection is reattempted.
+
         exists_query = "SELECT exists(SELECT 1 from pg_catalog.pg_database where datname = %s);"
-        self.cur.execute(exists_query, (self.DB_NAME,))
+        self.cur.execute(exists_query, (self.db_name,))
 
 
         if not self.cur.fetchone()[0]:
             print("Database not found, attempting to create...")
-            dbcreate_query = "CREATE DATABASE {}".format(self.DB_NAME) 
+            dbcreate_query = "CREATE DATABASE {}".format(self.db_name) 
             try:
-                self.cur.execute(dbcreate_query, (self.DB_NAME,))
-            except Exception:
-                if Exception == psycopg2.errors.DuplicateDatabase:
+                self.cur.execute(dbcreate_query, (self.db_name,))
+            except Exception as e:
+                if e == psycopg2.errors.DuplicateDatabase:
                     pass
-                print("Failed to create database. Check user permissions.")
+                else:
+                    print("Failed to create database. Check user permissions.")
             
             self.db_disconnect()
 
-            self.db_conn(dbname=self.DB_NAME)
+            self.db_conn(dbname=self.db_name)
 
             colortable_query = """CREATE TABLE colors 
                                   (color_id serial PRIMARY KEY, 
@@ -92,11 +98,16 @@ class db:
                                    id serial PRIMARY KEY,
                                    search_id VARCHAR (36) REFERENCES searches(search_id),
                                    expire timestamp without time zone);"""
-            
+
         else:
-            self.db_conn(dbname=self.DB_NAME)
+            self.db_conn(dbname=self.db_name)
+
+
+
+
+
     
-    def AddEntry(self, colors, img_url):
+    def add_entry(self, colors, img_url):
         insert_url_query = """INSERT INTO urls (url_id, url) VALUES (DEFAULT, %s) 
                               ON CONFLICT (url) DO NOTHING RETURNING url_id;"""
 
@@ -131,6 +142,10 @@ class db:
         
         print("new entry added")
 
+
+
+
+
     def save_search(self, key, ids, expire, perpage):
         # key - unique identifier of a search
         # ids - ids of images
@@ -161,7 +176,10 @@ class db:
         return pages
         
 
-    def page(self, key, page):
+
+
+
+    def fetch_page(self, key, page):
 
         page_query = """SELECT url FROM
                         (SELECT url_id FROM searches WHERE search_id = %s AND page = %s) b
@@ -170,6 +188,8 @@ class db:
         self.cur.execute(page_query, (key, page,))
 
         return self.cur.fetchall()
+
+
 
 
     # to run whenever a new search is saved.
@@ -182,6 +202,20 @@ class db:
 
         delete_expire_query = "DELETE FROM expire WHERE expire < NOW());"
         self.cur.execute(delete_search_query)
+
+
+
+
+    def delete(self, key):
+        # If have time, edit tables to cascade on delete
+
+        delete_search_query = "DELETE FROM searches WHERE search_id = %s"
+        self.cur.execute(delete_search_query, (key,))
+
+        delete_expire_query = "DELETE FROM expire WHERE search_id = %s"
+        self.cur.execute(delete_expire_query, (key,))
+
+
 
 
     def fetch_imgs(self, colors):
@@ -198,6 +232,9 @@ class db:
         
         return self.cur.fetchall()
 
+
+
+
     def fetch_colors(self):
 
         get_colors_query = "SELECT hex FROM colors";
@@ -206,12 +243,16 @@ class db:
         return [x[0] for x in self.cur.fetchall()]
         
 
+
+
     def db_disconnect(self):
         self.cur.close()
         self.con.close()
 
+
+
+
 if __name__ == "__main__":
     db = db()
     db.connect()
-    db.AddEntry(["testclr", "aa"], "teeest")
     print(db.fetch_colors())

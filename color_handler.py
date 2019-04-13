@@ -4,7 +4,7 @@ from collections import Counter
 import time
 
 
-def Load(path):
+def load(path):
 
     # if path is URL, GET request it first
     if path[0:4] == "http":
@@ -13,32 +13,27 @@ def Load(path):
     img = Image.open(path)
     return img 
 
-def GetColorsWithFreq(img):
+# returns colors along with their frequencies in RGB
+def get_colors_freq_rgb(img):
     img = img.convert("RGB")
     # img = img.resize((16,16))
     
     w, h = img.size
     return img.getcolors(maxcolors=w*h)
 
-def GetColorsWithFreqHex(img):
-    colors = GetColorsWithFreq(img)
+# returns colors along with their frequencies in hex codes
+def get_colors_freq_hex(img):
+    colors = get_colors_freq_rgb(img)
     for i in range(0, len(colors)):
-        colors[i] = (colors[i][0], RgbToHex(*colors[i][1]))
+        colors[i] = (colors[i][0], rgb_to_hex(*colors[i][1]))
     return colors
 
-
-def GetColorsHex(img):
-    colors = GetColorsWithFreqHex(img)
+# returns just the unique hex codes of colors
+def get_colors_hex(img):
+    colors = get_colors_freq_hex(img)
     return [tpl[1] for tpl in colors]
 
 
-def RgbToHex(r, g, b):
+def rgb_to_hex(r, g, b):
     return '#{:02x}{:02x}{:02x}'.format(r, g, b)
 
-
-if __name__ == "__main__":
-    f = Load("test_img/test1.png")
-  
-    print(GetColorsHex(f))
-    
-    

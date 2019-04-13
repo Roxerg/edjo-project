@@ -1,12 +1,10 @@
+import configparser
 import requests
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from bs4 import BeautifulSoup
 import re
 
 
-
-
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 
 
 class SiteScraper:
@@ -16,23 +14,26 @@ class SiteScraper:
         search_word="car"
             ):
 
-        self.url="https://www.pinterest.co.uk/search/pins/?q="
-        options = self.setOptions()
-        self.driver = webdriver.Chrome("/usr/lib/chromium-browser/chromedriver", chrome_options=options)
-        self.driver.implicitly_wait(10)
-        self.driver.get(self.url+search_word)
+        conf = configparser.ConfigParser()
+        conf.read("config.ini")
 
-        #self.images = self.getImages()
+        self.url = conf["selenium"]["url"] 
+        self.sources = []
+        self.searchwords = []
+        
+        args = conf["selenium"]["args"].split(",")
+        path = conf["selenium"]["path"]
+        wait = conf.getint("selenium", "wait")
         
 
-        self.sources = []
+        options = self.set_options(args)
+        self.driver = webdriver.Chrome(path, chrome_options=options)
+        self.driver.implicitly_wait(wait)
 
-        self.searchwords = []
+        self.driver.get(self.url+search_word)
 
-        #self.getSources() 
-        #self.getSearchWords()
 
-    def setOptions(self, 
+    def set_options(self, 
                    args=["headless","--ignore-certificate-errors","--test-type"]):
         
         #binary_location="/usr/bin/chromium"
@@ -44,77 +45,70 @@ class SiteScraper:
             
         return options
     
-    def runScrape(self):
-        
-        self.getSearchWords()
-        self.getSources()
+    def run_scrape(self):
+
+        self.get_search_words()
+        self.get_sources()
         
     
-    def getImages(self):
+    # gets the html img elements whole
+    def get_images(self):
         return self.driver.find_elements_by_tag_name('img')
 
 
-    def loadSearch(self, search_word):
-        print("attempting to close and reopen new page")
-        
+    def load_search(self, search_word):
         try:
             self.driver.get(self.url+search_word)
         except Exception as e:
             print(str(e))
 
-    def getSearchWords(self):
+    def get_search_words(self):
         
         # gets recommended words for given search.
-        # data-test-id
-        # "search-guide"
+        # which appear on top of the page on some searches
         try:
-            #parent = self.driver.find_element_by_class_name("SearchImprovementsBar-InnerScrollContainer")
             elems = self.driver.find_elements_by_css_selector('a[title^="Search for"]') 
         except Exception as e:
-            print(e)
-            print("no suggested searches found!")
             elems = []
             
         
         for elem in elems:
-            #print(elem)
-            # gets the part of the title of div that contains the recommended word
+            # gets the part of the title of element that contains the recommended word
             word = re.findall(r'\"(.+?)\"', elem.get_attribute("title"))[0]
             word = word.split(' ')[1]
             # don't add duplicates
             if word not in self.searchwords: 
                 self.searchwords.append(word)
         
-    def getSources(self):
+    # gets the urls to the images from the html elements
+    def get_sources(self):
         
-        images = self.getImages()
+        images = self.get_images()
 
-        # throw out the pinterest logo 
-        # all other images are useful.
         for img in images:
             src = img.get_attribute('src')
             self.sources.append(src)
 
-    def Close(self):
+    def close(self):
         del self.sources
         del self.searchwords
         self.driver.quit()
 
 
-    def returnSearchWords(self):
+    def return_search_words(self):
         return self.searchwords
 
-    def returnSources(self):
+    def return_sources(self):
         return self.sources
 
-    def returnImgElements(self):
+    def return_img_elements(self):
         return self.images
 
 
 if __name__ == "__main__":
     scraper = SiteScraper()
-    print (scraper.returnSources())
-    print (scraper.returnSearchWords())
+    print (scraper.return_sources())
+    print (scraper.return_search_words())
 
 # SELENIUM
 # MANY-TO-MANY
