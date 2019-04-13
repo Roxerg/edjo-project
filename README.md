@@ -73,11 +73,12 @@ If **colors** argument is not provided, or is incorrectly formatted, a 400 statu
 
 ```json
 {
-    "images": [
-        		"https://i.pinimg.com/236x/19/f6/ed/19f6ed06c3e36f682ac74df84c806c91.jpg",
-        		"https://i.pinimg.com/236x/70/98/7a/70987acba05e1bbd3877e4d2f05573fb.jpg",
-   				"https://i.pinimg.com/236x/75/03/33/750333fcd5352a237fa7b6b77fb938ef.jpg"	   
-    		  ],
+    "images": 
+                [
+                    "https://i.pinimg.com/236x/19/f6/ed/19f6ed06c3e36f682ac74df84c806c91.jpg",
+                    "https://i.pinimg.com/236x/70/98/7a/70987acba05e1bbd3877e4d2f05573fb.jpg",
+                    "https://i.pinimg.com/236x/75/03/33/750333fcd5352a237fa7b6b77fb938ef.jpg"	   
+                ],
     "total" : 19,
     "p" : 1,
     "pages": 7,
@@ -120,9 +121,10 @@ if **p** exceeds the pagecount, an error is thrown.
 
 ```json
 {
-    "images": [
-        		"https://i.pinimg.com/236x/19/f6/ed/19f6ed06c3e36f682ac74df84c806c91.jpg"
-    		  ],
+    "images": 
+                [
+                    "https://i.pinimg.com/236x/19/f6/ed/19f6ed06c3e36f682ac74df84c806c91.jpg"
+                ],
     "total" : 19,
     "p" : 7,
     "pages": 7,
