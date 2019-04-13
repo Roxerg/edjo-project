@@ -203,7 +203,10 @@ class db:
                         ON urls.url_id = b.url_id;"""
         self.cur.execute(page_query, (key, page,))
 
-        return self.cur.fetchall()
+        # flatten an array of one dimensional arrays
+        pages = [j for i in self.cur.fetchall() for j in i]
+
+        return pages
 
 
 

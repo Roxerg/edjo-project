@@ -144,7 +144,7 @@ async def page(request):
 
 # retrieve next page of a given search
 @app.route("/page/next", methods=['GET', 'POST'])
-async def next(request):
+async def page_next(request):
 
     req_id = None
     page = 1
@@ -152,12 +152,13 @@ async def next(request):
     ### INPUT VALIDATION ###
 
     try:
-        args = request.args["id"].split("P")
+        args = request.args["id"][0].split("P")
         req_id = args[0]
-        page = args[1]
+        page = int(args[1])
         if page <= 0: 
             page = 1
-    except:
+    except Exception as e:
+        print(e)
         return json({"error":"id error"}, status=400)
 
     ### PROCESSING REQUEST ### 

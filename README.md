@@ -1,6 +1,6 @@
 # Pinterest Color API
 
-a RESTful API for finding Pinterest images based on hex color codes that goes fast.
+a RESTful API for finding Pinterest images based on hex color codes that GOES FAST.
 
 ---
 
@@ -8,7 +8,7 @@ a RESTful API for finding Pinterest images based on hex color codes that goes fa
 
 ## Setup
 
-This application runs on Python 3 with Sanic web server and requires Redis, PostgreSQL, and Selenium. Additional dependencies can be installed by running
+This application runs on Python 3 with Sanic web server and requires Redis, PostgreSQL, and Selenium (with Chromium). Additional dependencies can be installed by running:
 
 ```bash
 pip3 install -r requirements.txt
@@ -18,13 +18,17 @@ Connection details for PostgreSQL and Redis, as well as parameters such as amoun
 
 ## Running
 
-Web Server, along with helper processes can be started with
+Scrapers and classifiers that populate the database can be started with:
+
+`python3 getdata.py`
+
+Web Server can be started with:
 
 `python3 main.py`
 
 ## API
 
-All URLs can be accessed via a GET or POST request. Results are returned in `JSON`. 
+All endpoints can be accessed via a GET or POST request. Results are returned in `JSON`. 
 
 In case of an issue, a response of this form will be returned:
 
@@ -38,7 +42,7 @@ Along with an appropriate HTTP Code.
 
 
 
-Available URLs:
+Available endpoints:
 
 <!--ts-->
 
@@ -67,7 +71,7 @@ Performs the main task of the API, returning a collection of URLs for images con
 
 **perpage** - amount of entries to display per request. 
 
-If **colors** argument is not provided, or is incorrectly formatted, a 400 status code will be returned. If the request failed for an internal reason, 500 status code will be returned.
+If **colors** argument is not provided, or is incorrectly formatted, a `400` status code will be returned. If the request failed for an internal reason, `500` status code will be returned.
 
 ##### Example response:
 
@@ -115,8 +119,6 @@ goes to a specified page of results
 
 **p** - choice of a page. 
 
-if **p** exceeds the pagecount, an error is thrown.
-
 ##### Example response:
 
 ```json
@@ -128,7 +130,7 @@ if **p** exceeds the pagecount, an error is thrown.
     "total" : 19,
     "p" : 7,
     "pages": 7,
-    "id" : "4b558b47d6724f0fa820b6f7e08779a1p7"
+    "id" : "4b558b47d6724f0fa820b6f7e08779a1P7"
 }
 
 ```
@@ -137,18 +139,18 @@ the format and the meaning of variables is the same as in **/find**.
 
 ## /page/next
 
-Instead of returning a specified page, returns the page that follows the current one. Returns 404 if called with the **id** of the last page.
+Instead of returning a specified page, returns the page that follows the current one. Returns `404` if called with the **id** of the last page.
 
 ##### Example request:
 
 ```json
 {
-    "id": "4b558b47d6724f0fa820b6f7e08779a1p4"
+    "id": "4b558b47d6724f0fa820b6f7e08779a1P4"
 }
 
 ```
 
-**id** - initially received from **/find**.
+**id** - initially received from **/find**. 
 
 ##### Example response:
 
@@ -163,13 +165,13 @@ Deletes the stored information for the search results with a given  **id**.
 ```json
 
 {   
-    "id": "4b558b47d6724f0fa820b6f7e08779a1p4"
+    "id": "4b558b47d6724f0fa820b6f7e08779a1P4"
 }
 ```
 
 **id** - initially received from **/find**
 
-This method returns a status code 200 if it successfully cleared the search data. 
+This method returns a status code `200` if it successfully cleared the search data. 
 
 ## /colors
 
@@ -189,3 +191,42 @@ No arguments are needed for this URL.
 **count**  - number of colors stored in the database.
 
 **colors** - hex color codes as list of strings. 
+
+
+
+
+
+
+
+# FAQ
+
+**Q:** How to set up Selenium?
+
+**A:** ~ it is a mystery ~ 
+
+
+
+**Q:** How to set up PostgreSQL?
+
+**A:** ~ it is a mystery ~
+
+
+
+**Q:** are there more endpoints?
+
+**A:** Yes. There's one undocumented one and it's terrible
+
+
+
+
+
+## Improvements
+
+* Thread management! Ideally, more threads would automatically get dedicated to the task that is more "needed".   E.g. if the scraper builds up a high amount of URLs it can be temporarily stopped and the thread can be reassigned to classifying. 
+
+* An additional database table could be implemented for keeping track of data initially calculated or required for **/find** (total amount of pages, entries per page, expire time) Biggest argument in favour of this is that currently **page/next** is trivial since the page number is not-so-subtly appended to the end of the id, thus requiring id to be switched out for each next.
+* **/colors** should take an argument to return an interval rather than entire massive list at once.
+
+* The performance would most likely benefit from calling database actions, especially updates, asynchronously.
+* Write the FAQ 
+
