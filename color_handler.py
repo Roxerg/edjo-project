@@ -1,16 +1,15 @@
 from PIL import Image
 from requests import get
 from collections import Counter
+from io import BytesIO
+
 import time
 
 
 def load(path):
 
-    # if path is URL, GET request it first
-    if path[0:4] == "http":
-        path = get(path)
-
-    img = Image.open(path)
+    data = get(path)
+    img = Image.open(BytesIO(data.content))
     return img 
 
 # returns colors along with their frequencies in RGB

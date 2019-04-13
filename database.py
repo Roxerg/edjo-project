@@ -89,7 +89,7 @@ class db:
 
             searchestable_query = """CREATE TABLE searches 
                                      (id serial PRIMARY KEY,
-                                     search_id VARCHAR (36) UNIQUE NOT NULL,
+                                     search_id VARCHAR (36) NOT NULL,
                                      page integer NOT NULL, 
                                      url_id integer REFERENCES urls(url_id));"""
             self.cur.execute(searchestable_query)
@@ -108,37 +108,53 @@ class db:
 
     
     def add_entry(self, colors, img_url):
-        insert_url_query = """INSERT INTO urls (url_id, url) VALUES (DEFAULT, %s) 
-                              ON CONFLICT (url) DO NOTHING RETURNING url_id;"""
 
-        insert_clr_query = """INSERT INTO colors (color_id, hex) VALUES (DEFAULT, %s) 
-                              ON CONFLICT (hex) DO NOTHING RETURNING color_id;"""
+        img_url = img_url[:67] + ".jpg"
 
-        find_clr_query = "SELECT color_id FROM colors WHERE hex = %s; " 
+        insert_url_query = """INSERT INTO urls (url) VALUES (%s) 
+                              ON CONFLICT (url) 
+                              DO NOTHING RETURNING url_id;"""
+
+        entries_template = ','.join(['%s'] * len(colors))
+
+        insert_clr_query = """INSERT INTO colors (hex) VALUES {} 
+                              ON CONFLICT (hex) 
+                              DO NOTHING;""".format(entries_template)
+
+        get_clr_idxs_query = """SELECT color_id FROM colors 
+                                WHERE hex in ({})""".format(entries_template)
+
         
-        insert_lookup_query = "INSERT INTO url_color_lookup VALUES (%s, %s) ;"
+        insert_lookup_query = """INSERT INTO url_color_lookup (color_id, url_id) VALUES {} 
+                                 ON CONFLICT ON CONSTRAINT url_color_pkey DO NOTHING;"""
 
         self.cur.execute(insert_url_query, (img_url,))
 
+        # no url_idx will be returned if the url already exists in the database
         try:
             url_idx = self.cur.fetchone()[0]
-            print(url_idx)
         except:
             colors = []
+         
 
-        for col in colors:
-            self.cur.execute(insert_clr_query, (col,))
-            
-            try:
-                clr_idx = self.cur.fetchone()[0]
-            except:
-                clr_idx = -1
-            # if entry already exists, look up it's index
-            if clr_idx < 0:
-                self.cur.execute(find_clr_query, (col,))
-                clr_idx = self.cur.fetchone()[0]
+        if len(colors) == 0:
+            return
 
-            self.cur.execute(insert_lookup_query, (clr_idx, url_idx,))
+        self.cur.execute(insert_clr_query, [(x,) for x in colors])
+        
+        self.cur.execute(get_clr_idxs_query, colors)
+
+        color_idxs = [x[0] for x in self.cur.fetchall()]
+        if len(color_idxs) == 0:
+            return
+
+        lookupdata = list(zip(color_idxs, [url_idx]*len(color_idxs)))
+
+        entries_template = ','.join(['%s'] * len(lookupdata))
+        insert_lookup_query = insert_lookup_query.format(entries_template)
+
+        
+        self.cur.execute(insert_lookup_query, lookupdata)
         
         print("new entry added")
 
@@ -155,8 +171,8 @@ class db:
         # prepare an array of page indices to zip with other variables
         pages = len(ids)//perpage + (len(ids)%perpage>0)
         page_idxs = []
-        for p in range(1, pages):
-            page_idxs += [i]*perpage
+        for p in range(1, pages+1):
+            page_idxs += [p]*perpage
 
         # prepare data for query
         data = list(zip([key]*len(ids), page_idxs, ids))
@@ -171,7 +187,7 @@ class db:
         self.cur.execute(save_expiry_query, (key, expire,))
         
 
-        delete_expired()
+        self.delete_expired()
 
         return pages
         
@@ -220,7 +236,7 @@ class db:
 
     def fetch_imgs(self, colors):
         colors = tuple(colors)
-        get_urls_query = """SELECT url_id, url FROM 
+        get_urls_query = """SELECT u.url_id, url FROM 
                             (SELECT url_id, url FROM urls) u
                             INNER JOIN
                             (SELECT url_id from url_color_lookup WHERE color_id in 

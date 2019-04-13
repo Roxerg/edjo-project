@@ -21,6 +21,7 @@ class redis_conn:
                     port=port,
                     password=pwd)
 
+
     # only two sets are used:
     # for storing unclassified image urls
     # for storing unsearched keywords
@@ -34,6 +35,8 @@ class redis_conn:
             return 0
 
     def write_word(self, word):
+        
+        
         try: 
             self.r.sadd(self.wordkey, word)
             return 1
@@ -42,14 +45,14 @@ class redis_conn:
 
     def get_image(self):
         try:
-            return self.r.spop(self.imagekey)
+            return self.r.spop(self.imagekey).decode("utf-8")
         except: 
             return 0
 
     
     def get_word(self):
         try:
-            self.r.spop(self.wordkey)
+            return self.r.spop(self.wordkey).decode("utf-8")
         except:
             return 0
             

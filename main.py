@@ -1,7 +1,10 @@
 from sanic import Sanic
 from sanic.response import json
+from json import loads
+
 from database import db
 from redis_conn import redis_conn
+
 import configparser
 
 import hashlib
@@ -10,7 +13,6 @@ import uuid
 
 app = Sanic()
 db = db()
-db.connect()
 r = redis_conn()
 
 conf = configparser.ConfigParser()
@@ -22,8 +24,8 @@ HOST = conf["sanic"]["host"]
 PORT = conf["sanic"]["port"]
 
 # load config
-DEFAULT_PERPAGE = conf["app"]["perpage"]
-DEFAULT_EXPIRY = conf["app"]["expiry"]
+DEFAULT_PERPAGE = conf.getint("app", "perpage")
+DEFAULT_EXPIRY = conf.getint("app", "expiry")
 
 
 @app.route("/find", methods=['GET', 'POST']) 
@@ -35,28 +37,34 @@ async def find(request):
 
     ### INPUT VALIDATION ###
     try:
-        colors = args["colors"]
+        colors = loads(args["colors"][0])
+        
         colors = [clr.lower() for clr in colors]
     except KeyError:
         return json({"error": "no 'colors' argument found"}, 
                     status=400)
 
     for color in colors:
-        if not re.match(r"#([a-f0-9]{6})\b", color):
+        print(color)
+        if not re.match(r"#([a-f0-9]){6}\b", color):
             return json({"error": "incorrect color format"}, 
                         status=400)
 
     try: 
-        perpage = args["perpage"]
+        perpage = int(args["perpage"][0])
+        print(perpage)
     except:
         perpage = DEFAULT_PERPAGE
     
     try:
-        expire = args["expire"]
+        expire = int(args["expire"][0])
     except:
         expire = DEFAULT_EXPIRY
 
-    if not (isinstance() or isinstance() or expire > 0 or perpage > 0):
+    if not (isinstance(perpage, int) or isinstance(expire, int)):
+        return json({"error": "invalid arguments"},
+                    status=400)
+    elif (expire < 0 or perpage < 0):
         return json({"error": "invalid arguments"},
                     status=400)
 
@@ -65,11 +73,16 @@ async def find(request):
 
     try:
         data = db.fetch_imgs(colors)
-    except:
+    except Exception as e:
+        print(str(e))
         return json({"error": "database failure"}, status=500)
 
     # urls for current response, ids for saving session 
-    ids, urls = zip(*data)
+    if len(data) > 0:
+        ids, urls = zip(*data)
+    else:
+        ids = []
+        urls = []
     urls = list(urls)[0:perpage]
 
     identifier = uuid.uuid4().hex
@@ -78,6 +91,8 @@ async def find(request):
 
     # pages are simply attached to the end of the search ID
     identifier += "P1"
+
+    print(urls)
 
     return json({
         "images" : urls,
