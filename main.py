@@ -28,6 +28,8 @@ DEFAULT_PERPAGE = conf.getint("app", "perpage")
 DEFAULT_EXPIRY = conf.getint("app", "expiry")
 
 
+# primary functionality. finds images based on their color,
+# returns paginated results
 @app.route("/find", methods=['GET', 'POST']) 
 async def find(request):
     
@@ -83,16 +85,14 @@ async def find(request):
     else:
         ids = []
         urls = []
+
     urls = list(urls)[0:perpage]
 
     identifier = uuid.uuid4().hex
 
     pages = db.save_search(identifier, list(ids), expire, perpage)
 
-    # pages are simply attached to the end of the search ID
-    identifier += "P1"
 
-    print(urls)
 
     return json({
         "images" : urls,
@@ -102,20 +102,28 @@ async def find(request):
         "id": identifier
     }, status=200)
 
-    
+
+
+
 
 # deletes the search information created by making a /find request.
 @app.route("/dispose", methods=['GET', 'POST'])
 async def dispose(request):
+
     try:
         req_id = request.args["id"].split("P")[0]
         db.delete(req_id)
+
     except:
+
         return json({"error":"failed to dispose"}, 
                     status=500)
 
     return json(status=200)
-    
+
+
+
+
 
 # retrieve a specific page of a given search
 @app.route("/page", methods=['GET', 'POST'])
@@ -127,65 +135,162 @@ async def page(request):
     ### INPUT VALIDATION ###
 
     try:
-        page = request.args["p"]
+        page = int(request.args["p"][0])
         if page <= 0: 
             page = 1
     except:
         return json({"error":"page error"}, status=400)
     
     try:
-        req_id = request.args["id"].split("P")[0]
+        req_id = request.args["id"][0]
     except:
         return json({"error":"id error"}, status=400)
 
     ### PROCESSING REQUEST ### 
+    
+    try:
+        update = int(request.args["update"][0])
+    except:
+        update = 0
 
-    return getpage(req_id, page)
+    total, pages, p = db.fetch_stats(req_id)
+
+    if update == 1:
+        db.update_page(req_id, page)
+
+    return get_page(req_id, total, pages, page)
+
+
+
+
 
 # retrieve next page of a given search
 @app.route("/page/next", methods=['GET', 'POST'])
 async def page_next(request):
 
+    req_id, total, pages, p = move_page(request)
+
+    if p != pages:
+        p += 1
+
+    db.update_page(req_id, p)
+
+    return get_page(req_id, total, pages, p)
+
+
+
+
+
+# retrieve previous page of a given search
+@app.route("/page/previous", methods=['GET', 'POST'])
+async def page_prev(request):
+
+    req_id, total, pages, p = move_page(request)
+
+    if p != 1:
+        p -= 1
+
+    db.update_page(req_id, p)
+
+    return get_page(req_id, total, pages, p)
+
+
+
+
+
+def move_page(req):
+
     req_id = None
-    page = 1
 
     ### INPUT VALIDATION ###
 
     try:
-        args = request.args["id"][0].split("P")
-        req_id = args[0]
-        page = int(args[1])
-        if page <= 0: 
-            page = 1
+        req_id = req.args["id"][0]
     except Exception as e:
-        print(e)
         return json({"error":"id error"}, status=400)
 
     ### PROCESSING REQUEST ### 
 
-    return getpage(req_id, page+1)
+    total, pages, p = db.fetch_stats(req_id)
+
+    return req_id, total, pages, p
 
 
-# code shared by /page and /page/next
-def getpage(req_id, page):
 
-    res = db.fetch_page(req_id, page)
+
+
+# code shared by /page, /page/next, /page/previous
+def get_page(req_id, total, pages, p):
+
+    res = db.fetch_page(req_id, p)
 
     urls = list(res)
-    req_id = req_id + "P" + str(page)
+
+    if len(urls) == 0:
+        return json({
+            "error":"no results found"
+        }, status=404)
 
     return json({
         "images" : urls,
-        "p": page,
+        "total" : total,
+        "p": p,
+        "pages": pages,
         "id" : req_id
     }, status=200)
 
 
+
+
+
+
+# get the colors from the images
+@app.route("/colors", methods=['GET', 'POST'])
+async def colors(request):
+
+    try:
+        offset = int(request.args["offset"][0])
+    except:
+        offset = 0
+    
+    try:
+        num = int(request.args["num"][0])
+    except:
+        num = -1
+
+    colors = db.fetch_colors(offset, num)
+
+    return json({
+        "count" : len(colors),
+        "colors" : colors
+    }, status=200)
+
+
+
+
+
+@app.route("/stats", methods=['GET', 'POST'])
+async def stats(request):
+
+    imgs, colors, search = db.fetch_general_stats()
+    return json({
+        "stored_images"   : imgs,
+        "stored_colors"   : colors,
+        "active_searches" : search
+        }, status=200)
+
+
+
+
+
+# an awful joke
 @app.route("/memes", methods=['GET', 'POST'])
 async def memes(request):
     return json({"error": """due to the new EU copyright directive released under 
                              Article 13, this feature is temporarily suspended"""}, 
                 status=451)
+
+
 
 
 if __name__ == "__main__":

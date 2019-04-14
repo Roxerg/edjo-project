@@ -14,6 +14,12 @@ This application runs on Python 3 with Sanic web server and requires Redis, Post
 pip3 install -r requirements.txt
 ```
 
+If there are issues installing `psycopg2`, run this and retry:
+
+```bash
+sudo apt install python3-dev postgresql postgresql-contrib python3-psycopg2 libpq-dev
+```
+
 Connection details for PostgreSQL and Redis, as well as parameters such as amount of threads used for scraper and classifier, default amount of items displayed per page, and expiry time can be specified in the `config.ini` file. 
 
 ## Running
@@ -49,6 +55,7 @@ Available endpoints:
 * [/find](#/find)
 * [/page](#/page)
 * [/page/next](#/page/next)
+* [/page/previous](#/page/previous)
 * [/dispose](#/dispose)
 * [/colors](#/colors)
 
@@ -63,13 +70,20 @@ Performs the main task of the API, returning a collection of URLs for images con
 ```json
 {	
     "colors": ["#303f59", "#20b523", "#140c23"],
-    "perpage": 3
+    "perpage": 3,
+    "expire": 120 
 } 
 ```
 
+###### REQUIRED PARAMETERS:
+
 **colors** - a list of 6 character hex color codes as strings. 
 
-**perpage** - amount of entries to display per request. 
+###### OPTIONAL PARAMETERS:
+
+**perpage** - amount of entries to display per request. uses a default value if unspecified.
+
+**expire** - time after which a request can expire **(in minutes)**. uses a default value if unspecified.
 
 If **colors** argument is not provided, or is incorrectly formatted, a `400` status code will be returned. If the request failed for an internal reason, `500` status code will be returned.
 
@@ -111,13 +125,20 @@ goes to a specified page of results
 ```json
 {	
     "id": "4b558b47d6724f0fa820b6f7e08779a1p2",
-    "p": 7
+    "p": 7,
+    "update" : 1
 } 
 ```
+
+###### REQUIRED PARAMETERS:
 
 **id** - initially received from **/find**. 
 
 **p** - choice of a page. 
+
+###### OPTIONAL PARAMETERS:
+
+**update**  - if set to 1, page requests will update the page position for **/page/next**. By default, only **page/next** updates the position for itself. 
 
 ##### Example response:
 
@@ -127,9 +148,7 @@ goes to a specified page of results
                 [
                     "https://i.pinimg.com/236x/19/f6/ed/19f6ed06c3e36f682ac74df84c806c91.jpg"
                 ],
-    "total" : 19,
     "p" : 7,
-    "pages": 7,
     "id" : "4b558b47d6724f0fa820b6f7e08779a1P7"
 }
 
@@ -141,20 +160,39 @@ the format and the meaning of variables is the same as in **/find**.
 
 Instead of returning a specified page, returns the page that follows the current one. Returns `404` if called with the **id** of the last page.
 
+**if /page/next is called on the final page, it will just return the last page again.**
+
 ##### Example request:
 
 ```json
 {
     "id": "4b558b47d6724f0fa820b6f7e08779a1P4"
 }
-
 ```
+
+###### REQUIRED PARAMETERS:
 
 **id** - initially received from **/find**. 
 
 ##### Example response:
 
-Same as in **/find** and **/page**
+Same as **/page**
+
+## page/previous
+
+Identical in all aspects to **page/next**, except it will go backwards instead of forwards.
+
+**if /page/next is called on the first page, it will just return the first page again.**
+
+##### Example request:
+
+same as for **/page/next**
+
+##### Example response:
+
+same as for **/page/next**
+
+this method was mostly made for double-redirection in example responses in this documentation.
 
 ## /dispose
 
@@ -169,6 +207,8 @@ Deletes the stored information for the search results with a given  **id**.
 }
 ```
 
+###### REQUIRED PARAMETERS:
+
 **id** - initially received from **/find**
 
 This method returns a status code `200` if it successfully cleared the search data. 
@@ -177,22 +217,41 @@ This method returns a status code `200` if it successfully cleared the search da
 
 Returns the hex color codes stored in the database. Only colors that were found in stored images are included in the database. 
 
-No arguments are needed for this URL.
+No arguments are required for this endpoint, but there are optional **offset** and **num** arguments, that specify which part of the color list to return and how many colors to return, respectively. (colors are sorted by their id in the database, in other words, the order they were added). 
+
+If parameters are not set **offset** is 0 and all colors in the database are returned.
+
+##### Example request:
+
+```json
+{
+    "offset" : 100,
+    "num" : 2500
+}
+```
+
+###### OPTIONAL PARAMETERS:
+
+**offset** - offset from the start of the list (sorted by their ids) of colors.
+
+**num**  - number of colors to be returned. 
 
 ##### Example response:
 
 ```json
 {   
-    "count": "5",
+    "count": 5,
     "colors": ["#303f59", "#20b523", "#140c23", "#47a133", "#100113"]
 }
 ```
 
-**count**  - number of colors stored in the database.
+**count**  - number of colors returned.
 
-**colors** - hex color codes as list of strings. 
+**colors** - hex color codes as list of strings.
 
+If the response returns less colors than requested, there are no more colors after the specified offset.
 
+## /stats
 
 
 
@@ -214,7 +273,7 @@ No arguments are needed for this URL.
 
 **Q:** are there more endpoints?
 
-**A:** Yes. There's one undocumented one and it's terrible
+**A:** Yes. There's one undocumented one and it's terrible.
 
 
 
