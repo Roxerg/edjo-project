@@ -1,6 +1,4 @@
-from asyncpg import create_pool
 import config
-import asyncio
 import psycopg2
 import configparser
 

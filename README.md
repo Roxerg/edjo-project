@@ -253,9 +253,17 @@ If the response returns less colors than requested, there are no more colors aft
 
 ## /stats
 
+returns statistics in the form of number of things kept in the database. No parameters needed.
 
+##### Example response:
 
-
+```json
+{
+    "stored_images": 465,
+    "stored_colors": 1476903,
+    "active_searches": 2
+}
+```
 
 # FAQ
 
