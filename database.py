@@ -94,10 +94,18 @@ class db:
                                      url_id integer REFERENCES urls(url_id));"""
             self.cur.execute(searchestable_query)
 
+            searhstatstable_query = """CREATE TABLE search_stats
+                                       (search_id VARCHAR (36) PRIMARY KEY,
+                                       totalurls integer,
+                                       totalpages integer,
+                                       currpage integer);"""
+            self.cur.execute(searhstatstable_query)
+
             expiretable_query = """CREATE TABLE expire(
                                    id serial PRIMARY KEY,
                                    search_id VARCHAR (36) REFERENCES searches(search_id),
                                    expire timestamp without time zone);"""
+            self.cur.execute(expiretable_query)
 
         else:
             self.db_conn(dbname=self.db_name)
@@ -186,6 +194,10 @@ class db:
                                VALUES (%s, NOW() + (%s * interval '1 minute'));"""
         self.cur.execute(save_expiry_query, (key, expire,))
         
+        save_search_stats_query = """INSERT INTO search_stats 
+                                     (search_id, totalurls, totalpages, currpage)
+                                     VALUES (%s, %s, %s, %s);"""
+        self.cur.execute(save_search_stats_query, (key, len(ids), pages, 1))
 
         self.delete_expired()
 
@@ -210,6 +222,22 @@ class db:
 
 
 
+    def fetch_stats(self, key):
+
+        stats_query = """SELECT (totalurls, totalpages, currpage)
+                         FROM search_stats WHERE search_id = %s;"""
+        self.cur.execute(stats_query, (key,))
+        res = self.cur.fetchone()
+        return eval(res[0])
+
+
+
+    def update_page(self, key, page):
+
+        update_page_query = """UPDATE search_stats SET currpage = %s WHERE search_id = %s;"""
+        self.cur.execute(update_page_query, (page, key,))
+
+
 
     # to run whenever a new search is saved.
     def delete_expired(self):
@@ -225,42 +253,80 @@ class db:
 
 
 
+
     def delete(self, key):
         # If have time, edit tables to cascade on delete
 
-        delete_search_query = "DELETE FROM searches WHERE search_id = %s"
+        delete_search_query = "DELETE FROM searches WHERE search_id = %s;"
         self.cur.execute(delete_search_query, (key,))
 
-        delete_expire_query = "DELETE FROM expire WHERE search_id = %s"
+        delete_expire_query = "DELETE FROM expire WHERE search_id = %s;"
         self.cur.execute(delete_expire_query, (key,))
+
+        delete_stats_query = "DELETE FROM search_stats WHERE search_id = %s;"
+        self.cur.execute(delete_stats_query, (key,))
+
 
 
 
 
     def fetch_imgs(self, colors):
-        colors = tuple(colors)
+        params = tuple(colors) + (len(colors), )
+
+        entries_template = ','.join(['%s'] * len(colors))
+        
         get_urls_query = """SELECT u.url_id, url FROM 
                             (SELECT url_id, url FROM urls) u
                             INNER JOIN
                             (SELECT url_id from url_color_lookup WHERE color_id in 
-                            (SELECT color_id FROM colors WHERE colors.hex in (%s)) 
+                            (SELECT color_id FROM colors WHERE colors.hex in ({})) 
                             GROUP BY url_id HAVING COUNT(url_id) = %s 
                             ORDER BY url_id DESC) b
-                            ON u.url_id = b.url_id;"""
-        self.cur.execute(get_urls_query, (colors, len(colors)))
+                            ON u.url_id = b.url_id;""".format(entries_template)
+
+        self.cur.execute(get_urls_query, params)
         
         return self.cur.fetchall()
 
 
 
 
-    def fetch_colors(self):
 
-        get_colors_query = "SELECT hex FROM colors";
-        self.cur.execute(get_colors_query)
+    def fetch_colors(self, offset=0, num=-1):
+
+        if num == -1:
+            get_colors_query = """SELECT hex FROM colors 
+                                  ORDER BY color_id ASC
+                                  OFFSET %s""";
+            self.cur.execute(get_colors_query, (offset,))
+        else:
+            get_colors_query = """SELECT hex FROM colors 
+                                  ORDER BY color_id ASC
+                                  OFFSET %s LIMIT %s""";
+            self.cur.execute(get_colors_query, (offset, num))
 
         return [x[0] for x in self.cur.fetchall()]
         
+    
+    def fetch_general_stats(self):
+
+        imgcount_query = "SELECT COUNT(url) FROM urls;"
+
+        colorcount_query = "SELECT COUNT(hex) FROM colors;"
+
+        searchcount_query = "SELECT COUNT(search_id) FROM search_stats;"
+
+        self.cur.execute(imgcount_query)
+        imgs = self.cur.fetchone()
+
+        self.cur.execute(colorcount_query)
+        colors = self.cur.fetchone()
+
+        self.cur.execute(searchcount_query)
+        search = self.cur.fetchone()
+
+        return imgs[0], colors[0], search[0]
+
 
 
 
