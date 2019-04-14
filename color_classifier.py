@@ -32,15 +32,14 @@ class ImageClassifier:
         self.r.write_image(img_url)
 
         while img_url != 0:
-
-            img_url = self.r.get_image()
-            print(img_url)
-
-            img_file = color_handler.load(img_url)
-            colors = color_handler.get_colors_hex(img_file)
             
-            print(colors[0])
-            self.db.add_entry(colors, img_url)
+            img_url = self.r.get_image()
+            
+            if img_url != 0:
+                img_file = color_handler.load(img_url)
+                colors = color_handler.get_colors_hex(img_file)
+            
+                self.db.add_entry(colors, img_url)
 
 
 

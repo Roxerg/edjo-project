@@ -12,9 +12,10 @@ if __name__ == "__main__":
 
     sc_threads = conf.getint("app","scraper")
     cl_threads = conf.getint("app","classifier")
+    limit = conf.getint("app", "limit")
 
     classifier = ImageClassifier()
-    scraper = Scraper()
+    scraper = Scraper(limit=limit)
     
     scraper.run_threads()
     classifier.run_threads()

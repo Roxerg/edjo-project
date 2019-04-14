@@ -267,17 +267,33 @@ returns statistics in the form of number of things kept in the database. No para
 
 # FAQ
 
-**Q:** How to set up Selenium?
+**Q:** Why am I getting errors on Selenium?
 
-**A:** ~ it is a mystery ~ 
-
-
-
-**Q:** How to set up PostgreSQL?
-
-**A:** ~ it is a mystery ~
+**A:**  
 
 
+
+**Q:** How to install PostgreSQL?
+
+**A:** For PostgreSQL to work with Python, some extra packages need to be installed besides the server and the Python library. To do this, simply run this line:
+
+```bash
+sudo apt install python3-dev postgresql postgresql-contrib python3-psycopg2 libpq-dev
+```
+
+**Q:** Why are there PostgreSQL authentication erros with "peer" in the description?
+
+**A:** Make sure the postgres user provided in `config.ini` has the password authentication. to do this:
+
+run `locate pg_hba.conf` and open this file with a text editor.
+
+if there is a line like this:
+
+`local   all             postgres                                peer`
+
+replace `peer` with `md5`
+
+after this
 
 **Q:** are there more endpoints?
 

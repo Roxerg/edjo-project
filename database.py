@@ -1,4 +1,3 @@
-import config
 import psycopg2
 import configparser
 

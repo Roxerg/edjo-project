@@ -17,6 +17,8 @@ class Scraper:
 
         self.imgs = set()
         self.used_words = set()
+
+
         
     def init_scraper(self, drivernum=1):
         
@@ -36,7 +38,9 @@ class Scraper:
     
         print("no. of drivers initiated: " + str(len(self.drivers)))
 
-    def run_searches(self, driver, limit=5):
+
+
+    def run_searches(self, driver, limit=10):
 
         
         search_word = self.r.get_word()
@@ -66,10 +70,12 @@ class Scraper:
         return 1
         
 
-    def run_threads(self):
+
+
+    def run_threads(self, limit=100):
         self.init_scraper()
         for driver in self.drivers:
-            threading.Thread(target=self.run_searches, args=[driver]).start()
+            threading.Thread(target=self.run_searches, args=[driver, limit]).start()
     
     #async def Run(self):
       
