@@ -305,7 +305,7 @@ after this restart postgres by running
 
 
 
-Q:** are there more endpoints?
+**Q:** are there more endpoints?
 
 **A:** Yes. There's one undocumented one and it's terrible.
 
