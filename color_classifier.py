@@ -24,6 +24,19 @@ class ImageClassifier:
 
     def process_images(self):
 
+        # to avoid blocking caused by adding to the database,
+        # prepare_image is run asynchronously and creates new
+        # coroutines whenever adding a database entry
+
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop = asyncio.get_event_loop()
+        asyncio.ensure_future(self.prepare_image())
+        loop.run_forever()
+
+
+    async def prepare_image(self):
+
+        
         img_url = self.r.get_image()
 
         while img_url == 0:
@@ -38,13 +51,14 @@ class ImageClassifier:
             img_url = self.r.get_image()
             
             if img_url != 0:
+                print(len(img_url))
                 img_file = color_handler.load(img_url)
                 colors = color_handler.get_colors_hex(img_file)
             
-                self.db.add_entry(colors, img_url)
+                #self.db.add_entry(colors, img_url)
 
-
-
+                loop = asyncio.get_event_loop()
+                asyncio.ensure_future(self.db.add_entry(colors, img_url))
 
 
 

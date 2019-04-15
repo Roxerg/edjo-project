@@ -4,4 +4,5 @@ selenium==3.141.0
 redis==3.2.1
 requests==2.21.0
 asyncio==3.4.3
+asyncpg==0.18.3
 psycopg2==2.8.1

@@ -113,7 +113,7 @@ class db:
 
 
     
-    def add_entry(self, colors, img_url):
+    async def add_entry(self, colors, img_url):
 
         img_url = img_url[:67] + ".jpg"
 
@@ -148,7 +148,14 @@ class db:
 
         self.cur.execute(insert_clr_query, [(x,) for x in colors])
         
+        # blocks add entry until colors are entered into the database
+        await asyncio.sleep(5)
+
+        # fetches the indices of colors that were added
+        # due to possible highly likely conflicts cannot use RETURNING
         self.cur.execute(get_clr_idxs_query, colors)
+
+        await asyncio.sleep(2)
 
         color_idxs = [x[0] for x in self.cur.fetchall()]
         if len(color_idxs) == 0:

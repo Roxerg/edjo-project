@@ -27,16 +27,16 @@ class SiteScraper:
         
 
         self.options = self.set_options(args)
-        self.driver = start_driver()
+        self.driver = webdriver.Chrome(self.path, chrome_options=self.options)
+        self.driver.implicitly_wait(self.wait)
 
         self.driver.get(self.url+search_word)
 
 
     # initializes a new driver
     def start_driver(self):
-        driver = webdriver.Chrome(self.path, chrome_options=self.options)
-        driver.implicitly_wait(self.wait)
-        return driver
+        self.driver = webdriver.Chrome(self.path, chrome_options=self.options)
+        self.driver.implicitly_wait(self.wait)
 
 
 
@@ -71,12 +71,15 @@ class SiteScraper:
         try: 
             self.driver.close()
         except Exception as e:
-            print(str(e))
+            pass
 
         try:
             self.driver.get(self.url+search_word)
         except Exception as e:
-            print(str(e))
+            self.close()
+            self.start_driver()
+            self.driver.get(self.url+search_word)
+
 
 
 
@@ -108,7 +111,6 @@ class SiteScraper:
             self.sources.append(src)
 
     def close(self):
-        self.driver.close()
         self.driver.quit()
 
 

@@ -53,12 +53,15 @@ class Scraper:
         
         while search_word != 0 and search_word != None and len(self.used_words) < limit:
 
-
             self.used_words.add(search_word)
             
-
+            print("before load search")
             driver.load_search(search_word)
+            print("after load search")
+
+            print("before scrape")
             driver.run_scrape()
+            print("after scrape")
 
             words = driver.return_search_words()
             for word in words:
