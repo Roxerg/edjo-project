@@ -76,9 +76,7 @@ class SiteScraper:
         try:
             self.driver.get(self.url+search_word)
         except Exception as e:
-            self.close()
-            self.start_driver()
-            self.driver.get(self.url+search_word)
+            print(e)
 
 
 

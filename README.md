@@ -267,9 +267,13 @@ returns statistics in the form of number of things kept in the database. No para
 
 # FAQ
 
-**Q:** Why am I getting errors on Selenium?
+**Q:** Why am I getting Selenium errors?
 
-**A:**  
+**A:**  make sure chromedriver is installed:
+
+`apt install chromium-chromedriver`
+
+and is added to PATH.
 
 
 
@@ -280,6 +284,8 @@ returns statistics in the form of number of things kept in the database. No para
 ```bash
 sudo apt install python3-dev postgresql postgresql-contrib python3-psycopg2 libpq-dev
 ```
+
+
 
 **Q:** Why are there PostgreSQL authentication erros with "peer" in the description?
 
@@ -293,9 +299,13 @@ if there is a line like this:
 
 replace `peer` with `md5`
 
-after this
+after this restart postgres by running
 
-**Q:** are there more endpoints?
+`sudo service postgresql restart`
+
+
+
+Q:** are there more endpoints?
 
 **A:** Yes. There's one undocumented one and it's terrible.
 
@@ -305,11 +315,10 @@ after this
 
 ## Improvements
 
-* Thread management! Ideally, more threads would automatically get dedicated to the task that is more "needed".   E.g. if the scraper builds up a high amount of URLs it can be temporarily stopped and the thread can be reassigned to classifying. 
+- [ ] Thread management! Ideally, more threads would automatically get dedicated to the task that is more "needed".   E.g. if the scraper builds up a high amount of URLs it can be temporarily stopped and the thread can be reassigned to classifying. 
 
-* An additional database table could be implemented for keeping track of data initially calculated or required for **/find** (total amount of pages, entries per page, expire time) Biggest argument in favour of this is that currently **page/next** is trivial since the page number is not-so-subtly appended to the end of the id, thus requiring id to be switched out for each next.
-* **/colors** should take an argument to return an interval rather than entire massive list at once.
+- [x] An additional database table could be implemented for keeping track of data initially calculated or required for **/find** (total amount of pages, entries per page, expire time) Biggest argument in favour of this is that currently **page/next** is trivial since the page number is not-so-subtly appended to the end of the id, thus requiring id to be switched out for each next.
+- [x] **/colors** should take an argument to return an interval rather than entire massive list at once.
 
-* The performance would most likely benefit from calling database actions, especially updates, asynchronously.
-* Write the FAQ 
+- [x] The performance would most likely benefit from calling database actions, especially updates, asynchronously.
 

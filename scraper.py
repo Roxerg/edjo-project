@@ -53,15 +53,14 @@ class Scraper:
         
         while search_word != 0 and search_word != None and len(self.used_words) < limit:
 
+            # add to a list of words that have been searched for to avoid duplicates
             self.used_words.add(search_word)
             
-            print("before load search")
+            # load new search term
             driver.load_search(search_word)
-            print("after load search")
-
-            print("before scrape")
+            
+            # get results from new search term
             driver.run_scrape()
-            print("after scrape")
 
             words = driver.return_search_words()
             for word in words:
@@ -71,6 +70,7 @@ class Scraper:
             for img in driver.return_sources():
                 self.r.write_image(img)
 
+            # fetch another search term
             search_word = self.r.get_word()
 
         
