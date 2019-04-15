@@ -22,15 +22,22 @@ class SiteScraper:
         self.searchwords = []
         
         args = conf["selenium"]["args"].split(",")
-        path = conf["selenium"]["path"]
-        wait = conf.getint("selenium", "wait")
+        self.path = conf["selenium"]["path"]
+        self.wait = conf.getint("selenium", "wait")
         
 
-        options = self.set_options(args)
-        self.driver = webdriver.Chrome(path, chrome_options=options)
-        self.driver.implicitly_wait(wait)
+        self.options = self.set_options(args)
+        self.driver = start_driver()
 
         self.driver.get(self.url+search_word)
+
+
+    # initializes a new driver
+    def start_driver(self):
+        driver = webdriver.Chrome(self.path, chrome_options=self.options)
+        driver.implicitly_wait(self.wait)
+        return driver
+
 
 
     def set_options(self, 
@@ -56,11 +63,22 @@ class SiteScraper:
         return self.driver.find_elements_by_tag_name('img')
 
 
+
+    # loads up a new page 
     def load_search(self, search_word):
+
+        # attempts to close the previous page if there is one
+        try: 
+            self.driver.close()
+        except Exception as e:
+            print(str(e))
+
         try:
             self.driver.get(self.url+search_word)
         except Exception as e:
             print(str(e))
+
+
 
     def get_search_words(self):
         
@@ -90,8 +108,7 @@ class SiteScraper:
             self.sources.append(src)
 
     def close(self):
-        del self.sources
-        del self.searchwords
+        self.driver.close()
         self.driver.quit()
 
 

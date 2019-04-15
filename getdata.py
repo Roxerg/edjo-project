@@ -7,17 +7,20 @@ import time
 
 if __name__ == "__main__":
 
+    # runs classifier and scraper tasks.
+    # 
+
     conf = configparser.ConfigParser()
     conf.read("config.ini")
 
     sc_threads = conf.getint("app","scraper")
     cl_threads = conf.getint("app","classifier")
     limit = conf.getint("app", "limit")
-
-    classifier = ImageClassifier()
-    scraper = Scraper(limit=limit)
     
-    scraper.run_threads()
+    scraper = Scraper(sc_threads)
+    classifier = ImageClassifier(cl_threads)
+
+    scraper.run_threads(limit=limit)
     classifier.run_threads()
 
     

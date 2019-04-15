@@ -1,5 +1,6 @@
 import psycopg2
 import configparser
+import asyncio
 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 

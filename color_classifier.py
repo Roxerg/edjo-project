@@ -1,5 +1,6 @@
 import color_handler
 import threading 
+import asyncio
 
 from database import db
 from redis_conn import redis_conn
@@ -9,14 +10,15 @@ import time
 class ImageClassifier:
 
 
-    def __init__(self):
+    def __init__(self, threads):
 
         self.r = redis_conn()
         self.db = db()
+        self.threads = threads
 
-    def run_threads(self, threads=1):
+    def run_threads(self):
 
-        for thread in range(0, threads):
+        for thread in range(0, self.threads):
             threading.Thread(target=self.process_images).start()
 
 

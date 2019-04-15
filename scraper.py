@@ -9,7 +9,7 @@ import time
 
 class Scraper:
 
-    def __init__(self):
+    def __init__(self, drivernum):
 
         self.drivers = []
         
@@ -18,12 +18,14 @@ class Scraper:
         self.imgs = set()
         self.used_words = set()
 
+        self.drivernum = drivernum
+
 
         
-    def init_scraper(self, drivernum=1):
+    def init_scraper(self):
         
 
-        for i in range(0, drivernum):
+        for i in range(0, self.drivernum):
             dr = SiteScraper()
         
             dr.run_scrape()
@@ -40,8 +42,12 @@ class Scraper:
 
 
 
-    def run_searches(self, driver, limit=10):
+    def run_searches(self, driver, limit):
 
+        # pops search word from the redis table,
+        # loads up that page, gets images and search words from it
+        # deposits both to appropriate redis tables
+        # repeats until runs out of search words or reaches a set limit
         
         search_word = self.r.get_word()
         
