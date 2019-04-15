@@ -3,5 +3,5 @@ env
 *.rdb
 test_img
 .pyc
-__pycache__
+__pycache__/
 async_db.py
