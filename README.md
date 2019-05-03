@@ -1,6 +1,6 @@
 # Pinterest Color API
 
-a RESTful API for finding Pinterest images based on hex color codes that GOES FAST.
+a RESTful API for finding [Pinterest](https://www.pinterest.co.uk/) images based on hex color codes that GOES FAST.
 
 ---
 
